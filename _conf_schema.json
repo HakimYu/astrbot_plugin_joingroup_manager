@@ -1,0 +1,17 @@
+{
+  "group_list": {
+    "description": "启用群列表",
+    "type": "list",
+    "default": []
+  },
+  "black_list": {
+    "description": "黑名单",
+    "type": "list",
+    "default": []
+  },
+  "level": {
+    "description": "加群等级限制",
+    "type": "int",
+    "default": 16
+  }
+}

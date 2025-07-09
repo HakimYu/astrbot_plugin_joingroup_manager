@@ -1,9 +1,3 @@
-# helloworld
+# joingroup manager
 
-AstrBot 插件模板
-
-A template plugin for AstrBot plugin feature
-
-# 支持
-
-[帮助文档](https://astrbot.app)
+AstrBot 加群管理插件

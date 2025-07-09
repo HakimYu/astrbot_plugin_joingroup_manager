@@ -1,24 +1,48 @@
-from astrbot.api.event import filter, AstrMessageEvent, MessageEventResult
+from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star, register
 from astrbot.api import logger
+from astrbot.core import AstrBotConfig
 
-@register("helloworld", "YourName", "一个简单的 Hello World 插件", "1.0.0")
-class MyPlugin(Star):
-    def __init__(self, context: Context):
+
+@register("joingroup manager", "HakimYu", "加群管理插件", "1.0.0")
+class JoinGroupManager(Star):
+    def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
+        self.group_list = config.get("group_list")
+        self.black_list = config.get("black_list")
+        self.level = config.get("level")
 
-    async def initialize(self):
-        """可选择实现异步的插件初始化方法，当实例化该插件类之后会自动调用该方法。"""
-    
-    # 注册指令的装饰器。指令名为 helloworld。注册成功后，发送 `/helloworld` 就会触发这个指令，并回复 `你好, {user_name}!`
-    @filter.command("helloworld")
-    async def helloworld(self, event: AstrMessageEvent):
-        """这是一个 hello world 指令""" # 这是 handler 的描述，将会被解析方便用户了解插件内容。建议填写。
-        user_name = event.get_sender_name()
-        message_str = event.message_str # 用户发的纯文本消息字符串
-        message_chain = event.get_messages() # 用户所发的消息的消息链 # from astrbot.api.message_components import *
-        logger.info(message_chain)
-        yield event.plain_result(f"Hello, {user_name}, 你发了 {message_str}!") # 发送一条纯文本消息
+    @filter.event_message_type(filter.EventMessageType.ALL)
+    async def handle_group_add(self, event: AstrMessageEvent):
+        """处理所有类型的消息事件"""
+        # logger.info(f"Received message_obj: {event.message_obj}")
+        # 没有 message_obj 或 raw_message 属性时，直接返回
+        if not hasattr(event, "message_obj") or not hasattr(event.message_obj, "raw_message"):
+            return
 
-    async def terminate(self):
-        """可选择实现异步的插件销毁方法，当插件被卸载/停用时会调用。"""
+        raw_message = event.message_obj.raw_message
+        # 处理 raw_message
+        if not raw_message or not isinstance(raw_message, dict):
+            return
+        if raw_message.get("sub_type") != "add" and raw_message.get("sub_type") != "invite":
+            return
+        if raw_message.get("group_id") in self.group_list:
+            return
+
+        from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_platform_adapter import AiocqhttpAdapter
+        platform = self.context.get_platform(
+            filter.PlatformAdapterType.AIOCQHTTP)
+        assert isinstance(platform, AiocqhttpAdapter)
+        info = await platform.get_client().api.get_stranger_info(user_id=raw_message.get("user_id"))
+        if info.get("user_id") in self.black_list:
+            platform.get_client().api.set_group_add_request(flag=raw_message.get("flag"),
+                                                            sub_type=raw_message.get(
+                                                                "sub_type"),
+                                                            approve=False)
+
+        if int(info.get("level")) < int(self.level):
+            platform.get_client().api.set_group_add_request(flag=raw_message.get("flag"),
+                                                            sub_type=raw_message.get(
+                                                                "sub_type"),
+                                                            approve=False,
+                                                            reason=f"账号风险等级高，请换一个安全等级高的账号")
