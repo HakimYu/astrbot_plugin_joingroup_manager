@@ -29,19 +29,22 @@ class JoinGroupManager(Star):
         if raw_message.get("group_id") in self.group_list:
             return
 
+        logger.info(f"收到加群请求: {raw_message.get('user_id')} 请求加入 {raw_message.get('group_id')} ：{raw_message.get('comment')}")
         from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_platform_adapter import AiocqhttpAdapter
         platform = self.context.get_platform(
             filter.PlatformAdapterType.AIOCQHTTP)
         assert isinstance(platform, AiocqhttpAdapter)
         info = await platform.get_client().api.get_stranger_info(user_id=raw_message.get("user_id"))
         if info.get("user_id") in self.black_list:
-            platform.get_client().api.set_group_add_request(flag=raw_message.get("flag"),
+            logger.info(f"黑名单用户 {info.get('user_id')} 拒绝加群")
+            await platform.get_client().api.set_group_add_request(flag=raw_message.get("flag"),
                                                             sub_type=raw_message.get(
                                                                 "sub_type"),
                                                             approve=False)
 
         if int(info.get("level")) < int(self.level):
-            platform.get_client().api.set_group_add_request(flag=raw_message.get("flag"),
+            logger.info(f"等级不足 {info.get('user_id')} 拒绝加群")
+            await platform.get_client().api.set_group_add_request(flag=raw_message.get("flag"),
                                                             sub_type=raw_message.get(
                                                                 "sub_type"),
                                                             approve=False,
