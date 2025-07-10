@@ -12,7 +12,7 @@
   "exclude_words": {
     "description": "排除词列表，消息中包含这些词时不会处理",
     "type": "list",
-    "default": ["通过", "已经", "已通过"]
+    "default": ["通过", "已经", "已通过", "@", "群"]
   },
   "level": {
     "description": "加群等级限制",

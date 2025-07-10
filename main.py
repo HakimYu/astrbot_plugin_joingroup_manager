@@ -165,7 +165,7 @@ class JoinGroupDataManager:
             return []
 
 
-@register("joingroup manager", "HakimYu", "加群管理插件", "1.0.1")
+@register("joingroup manager", "HakimYu", "加群管理插件", "1.0.2")
 class JoinGroupManager(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -242,6 +242,33 @@ class JoinGroupManager(Star):
 
             logger.info(f"收到群消息: {event.message_obj.raw_message}")
 
+            # 检查是否是搜索命令
+            if message.startswith("搜"):
+                qq = message[1:].strip()  # 去掉"搜"字和空格
+                if not qq.isdigit():
+                    yield event.plain_result("请输入正确的QQ号")
+                    return
+
+                if self.data_manager.is_in_blacklist(qq):
+                    # 获取添加时间
+                    try:
+                        cursor = self.data_manager._get_db_cursor()
+                        cursor.execute("""
+                            SELECT datetime(timestamp, 'unixepoch', 'localtime') as add_time 
+                            FROM joingroup_manager_data 
+                            WHERE user_id = ?
+                        """, (qq,))
+                        result = cursor.fetchone()
+                        cursor.close()
+                        add_time = result[0] if result else "未知时间"
+                        yield event.plain_result(f"QQ号 {qq} 在黑名单中\n添加时间：{add_time}")
+                    except Exception as e:
+                        logger.error(f"查询添加时间失败: {e}")
+                        yield event.plain_result(f"QQ号 {qq} 在黑名单中")
+                else:
+                    yield event.plain_result(f"QQ号 {qq} 不在黑名单中")
+                return
+
             # 检查是否是删除黑名单命令
             match = self.remove_blacklist_pattern.match(message)
             if match:
@@ -261,6 +288,7 @@ class JoinGroupManager(Star):
                     yield event.plain_result(f"已将QQ号 {qq} 从黑名单中删除")
                 else:
                     yield event.plain_result(f"删除失败，请稍后重试")
+                return
 
             # 检查是否是监控的群
             group_id = event.get_group_id()
@@ -285,7 +313,7 @@ class JoinGroupManager(Star):
                         logger.error(f"添加黑名单失败: {e}")
                 else:
                     yield event.plain_result(f"QQ号 {qq} 已在黑名单中")
-
+            return
         except Exception as e:
             logger.error(f"处理群消息时出错: {e}")
             logger.error(traceback.format_exc())
