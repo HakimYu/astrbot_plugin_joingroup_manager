@@ -1,13 +1,18 @@
 {
   "group_list": {
-    "description": "启用群列表",
+    "description": "允许加群的群列表",
     "type": "list",
     "default": []
   },
-  "black_list": {
-    "description": "黑名单",
+  "monitor_groups": {
+    "description": "监控QQ号的群聊列表",
     "type": "list",
     "default": []
+  },
+  "exclude_words": {
+    "description": "排除词列表，消息中包含这些词时不会处理",
+    "type": "list",
+    "default": ["通过", "已经", "已通过"]
   },
   "level": {
     "description": "加群等级限制",
