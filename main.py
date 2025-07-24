@@ -165,7 +165,7 @@ class JoinGroupDataManager:
             return []
 
 
-@register("joingroup manager", "HakimYu", "加群管理插件", "1.0.2")
+@register("joingroup manager", "HakimYu", "加群管理插件", "1.0.3")
 class JoinGroupManager(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -193,9 +193,11 @@ class JoinGroupManager(Star):
         # 处理 raw_message
         if not raw_message or not isinstance(raw_message, dict):
             return
+        # 消息类型不是加群请求
         if raw_message.get("sub_type") != "add" and raw_message.get("sub_type") != "invite":
             return
-        if raw_message.get("group_id") in self.group_list:
+        # 群聊不在监控列表中
+        if raw_message.get("group_id") not in self.group_list:
             return
 
         logger.info(
@@ -239,6 +241,16 @@ class JoinGroupManager(Star):
                 event, "message_str") else None
             if not message:
                 return
+             # 检查是否是监控的群
+            group_id = event.get_group_id()
+            if not group_id or str(group_id) not in self.monitor_groups:
+                return
+
+            # 检查是否包含排除词
+            for word in self.exclude_words:
+                if word in message:
+                    logger.debug(f"消息包含排除词 '{word}'，跳过处理")
+                    return
 
             logger.info(f"收到群消息: {event.message_obj.raw_message}")
 
@@ -290,16 +302,6 @@ class JoinGroupManager(Star):
                     yield event.plain_result(f"删除失败，请稍后重试")
                 return
 
-            # 检查是否是监控的群
-            group_id = event.get_group_id()
-            if not group_id or str(group_id) not in self.monitor_groups:
-                return
-
-            # 检查是否包含排除词
-            for word in self.exclude_words:
-                if word in message:
-                    logger.debug(f"消息包含排除词 '{word}'，跳过处理")
-                    return
 
             # 查找消息中的QQ号（8位以上数字）
             qq_numbers = self.qq_pattern.findall(message)
